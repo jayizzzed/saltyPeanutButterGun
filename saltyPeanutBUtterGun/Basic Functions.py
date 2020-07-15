@@ -13,13 +13,26 @@ from secrets import randbelow
 
 import random
 
+from PIL import Image
 
 def setup(url):
     path_to_firefox = 'C:\Program Files\Mozilla Firefox\firefox.exe'
     binary = FirefoxBinary(path_to_firefox)
 
+    user_agent_list = [
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 12_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) GSA/83.0.268992909 Mobile/15E148 Safari/605.1',
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_3 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) CriOS/61.0.3163.73 Mobile/14G60 Safari/602.1',
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 10_2 like Mac OS X) AppleWebKit/602.1.50 (KHTML, like Gecko) CriOS/55.0.2883.79 Mobile/14C92 Safari/602.1',
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 8_3 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) CriOS/42.0.2311.47 Mobile/12F70 Safari/600.1.4',
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 12_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/83.0.4103.88 Mobile/15E148 Safari/604.1',
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 13_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1 Mobile/15E148 Snapchat/10.77.5.59 (like Safari/604.1)',
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148',
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/602.1.50 (KHTML, like Gecko) CriOS/58.0.3029.83 Mobile/14E304 Safari/602.1',
+    ]
+
+    user_agent = random.choice(user_agent_list)
+
     profile = webdriver.FirefoxProfile()
-    user_agent ="Mozilla/5.0 (iPhone; CPU iPhone OS 12_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) GSA/83.0.268992909 Mobile/15E148 Safari/605.1"
     profile.set_preference("general.useragent.override", user_agent)
     profile.set_preference("dom.webdriver.enabled", False)
     #profile.set_preference('excludeSwitches', ["enable-automation"])
@@ -111,7 +124,8 @@ def upload(driver, path, caption):
     next_btn.click()
 
     add_caption(driver, caption)
-
+    pyautogui.press('tab')
+    time.sleep(1)
     share_btn = driver.find_element_by_xpath("//*[contains(text(), 'Share')]")
     share_btn.click()
     
@@ -122,7 +136,7 @@ def open_img(path):
     pyautogui.press('enter')
     
 
-def add_caption(driver, caption):
+def add_caption(driver, caption = 'no cap'):
     time.sleep(1)
     text_area = driver.find_element_by_xpath('//textarea')
     text_area.click()
@@ -202,13 +216,67 @@ def random_url():
     url = random.choice(url_list) + 'top/'
     return url
 
-def loop():
-    for x in range(48):
+def open_new_page(driver, url):
+    driver.get(url)
+    time.sleep(5)
+    con_btn = driver.find_element_by_xpath("//*[contains(text(), 'Continue')]")
+    con_btn.click()
+    
+    return driver
 
+def resize_image(path):
+    '''
+    Landscape 1080px * 608px -> width = 1.776*height
+    Square 1080px * 1080px -> width = height
+    Portrait 1080 * 1350px -> width = 0.8*height
+    '''
+    print('to be continued')
+
+def make_square(img, size, save_path, color='black'):
+
+    new_img = Image.new('RGB', size, color)
+
+    width, height = img.size
+
+    factor = 1080/width
+
+    width = int(width*factor)
+    height = int(height*factor)
+
+    new_img_size = (width, height)
+
+    img = img.copy().resize(size = new_img_size)
+
+    offset = int((1080 - height)/2)
+
+    new_img.paste(old_img, (0,offset) )
+
+    new_img.save(save_path)
+
+
+def loop(driver_inst):
+    for x in range(12):
+
+        driver = setup(random_url())
+        
+        img_url = get_img_url(driver)
+
+        caption = get_img_cap(driver).text
+
+        content = request_img(img_url)
+
+        filename = 'pic.jpg'
+        path = 'C:\\Users\\49179\\Desktop\\Stolen Memes\\' + filename
+        
+        save_img(content, filename)
+
+        upload(driver_inst, path, caption)
+        
         sleep_minutes = randbelow(60)
         time.sleep(60*sleep_minutes)
+        driver.close()
 
-
+        
 if __name__ == '__main__':
 
     url = random_url()
@@ -226,9 +294,9 @@ if __name__ == '__main__':
     #requests found image
     content = request_img(img_url)
 
-    name = 'pic.jpg'
+    filename = 'pic.png'
     #saves image in folder "Stolen Memes"
-    save_img(content, name)
+    save_img(content, filename)
 
     #set profile, cookies & open (instagram) url
     driver_inst = setup_inst(url_inst)
@@ -239,10 +307,16 @@ if __name__ == '__main__':
     #logs into specified instagram account
     driver_inst = log_in(driver_inst, username, password)
 
-    filename = name
     path = 'C:\\Users\\49179\\Desktop\\Stolen Memes\\' + filename
+
+    old_img = Image.open(path)
+    size = (1080, 1080)
+    make_square(old_img, size, path)
+
     
     #uploads image to instagram page and adds caption
     upload(driver_inst, path, caption)
+    #*N*loop(driver_inst)
 
+    
     
